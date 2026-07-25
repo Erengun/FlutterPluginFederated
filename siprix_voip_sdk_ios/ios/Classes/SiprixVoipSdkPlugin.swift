@@ -113,6 +113,7 @@ private let kArgDurationMs  = "durationMs"
 private let kArgDvcIndex = "dvcIndex"
 private let kArgDvcName  = "dvcName"
 private let kArgDvcGuid  = "dvcGuid"
+private let kArgDvcIsSel = "dvcIsSel"
 
 private let kArgCallId     = "callId"
 private let kArgFromCallId = "fromCallId"
@@ -405,58 +406,135 @@ class SiprixEventHandler : NSObject, SiprixEventDelegate {
 ///AudioDevices
 
 class AudioDevices {
-    private var _isBtConnected: Bool = false
     private var _eventHandler : SiprixEventHandler?
-    static let kOutSpeaker=0
-    static let kOutEarPiece=1
-    static let kRouteBuildIn=2
-    static let kRouteBluetooth=3
-    
+    private var _isBtConnected: Bool = false
+    private var _isHpConnected: Bool = false
+    private var _curDevGuid: Devices = .kGuidUndef
+    private var _devices: [Devices] = []
+
+    enum Devices : String{
+        case kGuidSpeaker="spkr"
+        case kGuidEarPiece="earpiece"
+        case kGuidBuiltIn="builtin"
+        case kGuidHeadphones="hp"
+        case kGuidBluetooth="bt"
+        case kGuidUndef="undef"
+    }
+
     public func configure(_ eventHandler : SiprixEventHandler) {
         _eventHandler = eventHandler
-        checkIsBtConnected(notify: false)
+        _curDevGuid = checkOutputsAndBuildDevicesList(true)
         addObserverForRouteChangeNotification()
     }
 
     deinit {
         removeObserverRouteChangeNotification()
     }
-    
     func getCount() -> Int {
-        return _isBtConnected ? 4 : 3
+        return _devices.count
     }
-        
-    func getName(_ dvcIndex: Int) -> String {
-        switch(dvcIndex) {
-            case AudioDevices.kOutSpeaker:     return "Speaker"
-            case AudioDevices.kOutEarPiece:    return "Earpiece"
-            case AudioDevices.kRouteBuildIn:   return "BuiltIn"
-            case AudioDevices.kRouteBluetooth: return "Bluetooth"
-            default:                           return "---"
+    func getDeviceGuid(_ index: Int) -> Devices {
+        return _devices[index]
+    }
+
+    func getName(_ guid: Devices) -> String {
+        switch(guid) {
+        case .kGuidSpeaker:    return "Speaker"
+        case .kGuidEarPiece:   return "Earpiece"
+        case .kGuidHeadphones: return "Headphones"
+        case .kGuidBuiltIn:    return "BuiltIn"
+        case .kGuidBluetooth:  return "Bluetooth"
+        default:               return "???"
         }
     }
     
-    private func checkIsBtConnected(notify : Bool){
-        let currentRouteOutputs = AVAudioSession.sharedInstance().currentRoute.outputs
-        let btPorts: [AVAudioSession.Port] = [.bluetoothA2DP, .bluetoothLE, .bluetoothHFP]
-        let newBtConnected = currentRouteOutputs.contains { btPorts.contains($0.portType) }
-        if(newBtConnected == _isBtConnected) { return }
-        
-        _isBtConnected = newBtConnected
-        if(notify) {  _eventHandler?.onDevicesAudioChanged() }
-        print("siprix: isBtConnected: \(_isBtConnected)")
+    func isSelected(_ guid: Devices) -> Bool {
+        return _curDevGuid==guid
     }
-    
+
+    private func checkOutputsAndBuildDevicesList(_ reBuildList:Bool) -> Devices {
+        let currentRoute = AVAudioSession.sharedInstance().currentRoute
+        let btPorts: [AVAudioSession.Port] = [.bluetoothA2DP, .bluetoothLE, .bluetoothHFP]
+        let newBtConnected = currentRoute.outputs.contains { btPorts.contains($0.portType) }
+        let newHpConnected = currentRoute.outputs.contains { $0.portType == .headphones}
+        let newSpeaker = currentRoute.outputs.contains { $0.portType == .builtInSpeaker}
+        //let newEarPiece = currentRoute.outputs.contains { $0.portType == .builtInReceiver}
+
+        //Resolve cur device index
+        var newDevGuid : Devices = .kGuidUndef
+        if(newBtConnected) { newDevGuid = .kGuidBluetooth }else
+        if(newSpeaker)     { newDevGuid = .kGuidSpeaker } else
+        if(newHpConnected) { newDevGuid = .kGuidHeadphones }
+        else               { newDevGuid = .kGuidEarPiece }
+
+        if(reBuildList) {
+            _isBtConnected = newBtConnected
+            _isHpConnected = newHpConnected
+            
+            _devices = [.kGuidSpeaker]
+            _devices.append(_isHpConnected ? .kGuidHeadphones : .kGuidEarPiece)
+            if(_isBtConnected) { _devices.append(.kGuidBluetooth) }
+            //if(_isHpConnected) { _devices.append(.kGuidBuiltIn) }
+        }
+
+        var msg = "---handleRouteChange: dev:\(getName(newDevGuid))"//reason:\(reasonName(reason))
+        for output in currentRoute.outputs { msg.append(" Out:\(output.portType.rawValue)") }
+        for input in currentRoute.inputs   { msg.append(" In:\(input.portType.rawValue)")   }
+        print(msg)
+        
+        return newDevGuid
+    }
+
     @objc private func handleRouteChange(notification: Notification) {
         guard let userInfo = notification.userInfo,
               let reasonValue = userInfo[AVAudioSessionRouteChangeReasonKey] as? UInt,
               let reason = AVAudioSession.RouteChangeReason(rawValue: reasonValue) else { return }
-        // Check whenever a new device is connected or disconnected
-        if((reason == .newDeviceAvailable)||(reason == .newDeviceAvailable)){
-            checkIsBtConnected(notify: true)
+
+        //Check connected
+        let availableChanged = (reason == .newDeviceAvailable)||(reason == .oldDeviceUnavailable)
+        let newDevGuid = checkOutputsAndBuildDevicesList(availableChanged)
+
+        //Notify if required
+        if(availableChanged || (newDevGuid != _curDevGuid)) {
+            _curDevGuid = newDevGuid
+            _eventHandler?.onDevicesAudioChanged()
         }
+        print("siprix: isBtConnected: \(_isBtConnected) isHpConnected:\(_isHpConnected) curDev:\(_curDevGuid)")
     }
     
+    func toggleRoute(_ dvcIndex: Int, _siprixModule : SiprixModule) -> Bool {
+        guard dvcIndex >= 0 && dvcIndex < _devices.count else { return false }
+        var ret = true
+        do {
+            let session = AVAudioSession.sharedInstance()
+            switch(_devices[dvcIndex]) {
+            case .kGuidSpeaker:
+                try session.setPreferredInput(session.availableInputs?.first(where: { .builtInMic == $0.portType }))
+                try session.overrideOutputAudioPort(.speaker)
+                
+            case .kGuidHeadphones:
+                try session.overrideOutputAudioPort(.none)
+                try session.setPreferredInput(session.availableInputs?.first(where: { .headsetMic == $0.portType }))
+                
+            case .kGuidBluetooth:
+                let inPorts:[AVAudioSession.Port] = [.bluetoothA2DP, .bluetoothLE, .bluetoothHFP]
+                try session.overrideOutputAudioPort(.none)
+                try session.setPreferredInput(session.availableInputs?.first(where: { inPorts.contains($0.portType) }))
+                
+            case .kGuidEarPiece:     //applyOut=false//return _siprixModule.routeAudioToBuiltIn()
+                try session.overrideOutputAudioPort(.none)
+                try session.setPreferredInput(session.availableInputs?.first(where: { .builtInMic == $0.portType }))
+                
+            default:
+                break
+            }
+        } catch {
+            print("siprix: Failed to set audio route: \(error)")
+            ret = false
+        }
+        return ret
+    }
+
     private func addObserverForRouteChangeNotification() {
         NotificationCenter.default.addObserver(self,
             selector: #selector(handleRouteChange),
@@ -1549,8 +1627,10 @@ public class SiprixVoipSdkPlugin: NSObject, FlutterPlugin {
         }
         
         var argsMap = [String:Any]()
-        argsMap[kArgDvcName] = _devicesList.getName(dvcIndex!)
-        argsMap[kArgDvcGuid] = String(dvcIndex!)
+        let guid = _devicesList.getDeviceGuid(dvcIndex!)
+        argsMap[kArgDvcIsSel] = _devicesList.isSelected(guid)
+        argsMap[kArgDvcName] = _devicesList.getName(guid)
+        argsMap[kArgDvcGuid] = guid.rawValue
         result(argsMap);
     }
 
@@ -1573,14 +1653,14 @@ public class SiprixVoipSdkPlugin: NSObject, FlutterPlugin {
             return
         }
         
-        let ret : Bool;
-        switch(dvcIndex) {
-            case AudioDevices.kOutSpeaker:     ret = _siprixModule.overrideAudioOutput(toSpeaker: true)
-            case AudioDevices.kOutEarPiece:    ret = _siprixModule.overrideAudioOutput(toSpeaker: false)
-            case AudioDevices.kRouteBluetooth: ret = _siprixModule.routeAudioToBluetooth()
-            case AudioDevices.kRouteBuildIn:   ret = _siprixModule.routeAudioToBuiltIn()
-            default:                           ret = false;
-        }
+        let ret : Bool = _devicesList.toggleRoute(dvcIndex!, _siprixModule:_siprixModule);
+        //switch(dvcIndex) {
+        //    case AudioDevices.kOutSpeaker:     ret = _siprixModule.overrideAudioOutput(toSpeaker: true)
+        //    case AudioDevices.kOutEarPiece:    ret = _siprixModule.overrideAudioOutput(toSpeaker: false)
+        //    case AudioDevices.kRouteBluetooth: ret = _siprixModule.routeAudioToBluetooth()
+        //    case AudioDevices.kRouteBuildIn:   ret = _siprixModule.routeAudioToBuiltIn()
+        //    default:                           ret = false;
+        //}
 
         if (ret) { result("Success") }
         else     { result(FlutterError(code: "-", message: "Can't overrideAudioOutput/set route", details: nil)) }
@@ -1819,9 +1899,9 @@ class SiprixCxProvider : NSObject, CXProviderDelegate {
     }
     
     func onSipTerminated(_ callId: Int) {
-        DispatchQueue.main.asyncAfter(deadline: .now() + .milliseconds(250)) { [weak self] in
-            self?.manualDeactivateAudioSession()
-        }
+        //DispatchQueue.main.asyncAfter(deadline: .now() + .milliseconds(250)) { [weak self] in
+        //    self?.manualDeactivateAudioSession()
+        //}
 
         let callIdx = _callsList.firstIndex(where: {$0.id == callId})
         if(callIdx == nil) {
@@ -1905,9 +1985,10 @@ class SiprixCxProvider : NSObject, CXProviderDelegate {
             _siprixModule.writeLog("CxProvider: preConfigure AVAudioSession")
             try sharedSession.setCategory(.playAndRecord, mode: withVideo ? .videoChat : .voiceChat,
                                           options: [.allowBluetooth, .mixWithOthers])
-            try sharedSession.setActive(false)
+            //try sharedSession.setActive(false)
         } catch {
             _siprixModule.writeLog("CxProvider: failed to configure AVAudioSession: \(error.localizedDescription)")
+            _siprixModule.writeLog("CxProvider: category: \(sharedSession.category) mode: \(sharedSession.mode)")
         }
     }
 
