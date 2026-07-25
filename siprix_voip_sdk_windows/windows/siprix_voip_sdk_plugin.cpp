@@ -119,6 +119,7 @@ const char kArgDurationMs[] = "durationMs";
 const char kArgDvcIndex[]   = "dvcIndex";
 const char kArgDvcName[]    = "dvcName";
 const char kArgDvcGuid[]    = "dvcGuid";
+const char kArgDvcIsSel[]   = "dvcIsSel";
 
 const char kArgCallId[]     = "callId";
 const char kArgFromCallId[] = "fromCallId";
@@ -1027,6 +1028,7 @@ void SiprixVoipSdkPlugin::doGetDevice(F getDeviceF, const flutter::EncodableMap&
         flutter::EncodableMap retMap;
         retMap[flutter::EncodableValue(kArgDvcName)] = flutter::EncodableValue(std::string(name));
         retMap[flutter::EncodableValue(kArgDvcGuid)] = flutter::EncodableValue(std::string(guid));
+        retMap[flutter::EncodableValue(kArgDvcIsSel)] = flutter::EncodableValue(Dvc_IsSelected(module_, guid));
         result->Success(flutter::EncodableValue(std::move(retMap)));
     }
     else {
