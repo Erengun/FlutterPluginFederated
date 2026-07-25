@@ -1,3 +1,17 @@
+## 1.0.41
+- Improved implementation which renegotiates calls when network state changed
+- Modified code of closing TCP(TLS) connections, now lib uses RST, which allows to avoid TIME_WAIT state
+- Fixed bug with ability to mute camera by the side, which upgraded call to video
+- Fixed bug with deleting transport when delete account
+- Added ability to periodically print call stats to log (each 20sec when set 'debug' log level)
+- Windows: Added ability to work with audio devices which supports only 192kHz sample rate
+- Windows: Added new API method 'Dvc_IsSelected', returns true when guid argument matches system's default or manually selected microphone or speaker
+  When changed system default or list of audio devices lib triggers OnDevicesAudioChanged
+- Android: Added ability to handle 'ConnectivityManager.NetworkCallback::onLost' and report network lost more precisely
+- Android: Improved detection 464XLAT support. Added ability to wait a bit longer and check does IPv4 interface become available
+- Android, Linux: Set TCP socket option TCP_USER_TIMEOUT with value 15sec, which allows to detect losing TCP/TLS connection much faster
+- iOS: Redesigned handling audio devices and detect route changes. Now lib reports which device is selected
+
 ## 1.0.40
 - Updated recorder implementation
   = Fixed bug with resampling which happens when app started recording just after call start
