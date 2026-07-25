@@ -333,7 +333,8 @@ class _SwitchedCallWidgetState extends State<SwitchedCallWidget> {
     final devices = context.watch<DevicesModel>();
     return [
       for(var dvc in devices.playout)
-        MenuItemButton(onPressed: () { _setPlayoutDevice(dvc.index); }, child: Text(dvc.name)),
+        MenuItemButton(onPressed: () { _setPlayoutDevice(dvc.index); },
+          child: Text(dvc.name, style: TextStyle(color: (dvc.index==devices.playoutIndex) ? Colors.red : Colors.black))),
     ];
   }
 
