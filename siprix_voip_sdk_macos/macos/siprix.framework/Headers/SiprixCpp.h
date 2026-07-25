@@ -376,6 +376,7 @@ EXPORT ErrorCode Dvc_GetVideoDevice(ISiprixModule* module, uint16_t index,
 
 EXPORT ErrorCode Dvc_SetPlayoutDevice(ISiprixModule* module, uint16_t index);
 EXPORT ErrorCode Dvc_SetRecordingDevice(ISiprixModule* module, uint16_t index);
+EXPORT bool      Dvc_IsSelected(ISiprixModule* module, const char* guid);
 
 EXPORT ErrorCode Dvc_SetVideoDevice(ISiprixModule* module, uint16_t index);
 EXPORT ErrorCode Dvc_SetVideoParams(ISiprixModule* module, VideoData* params);
