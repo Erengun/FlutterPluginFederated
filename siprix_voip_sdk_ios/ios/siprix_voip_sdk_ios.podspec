@@ -4,7 +4,7 @@
 #
 Pod::Spec.new do |s|
   s.name             = 'siprix_voip_sdk_ios'
-  s.version          = '1.0.41'
+  s.version          = '1.0.42'
   s.summary          = 'Siprix VoIP SDK plugin for embedding voice and video communication.'
   s.description      = <<-DESC
 Siprix VoIP SDK plugin for embedding voice and video communication (based on SIP/RTP protocols) into Flutter applications.
@@ -13,7 +13,7 @@ Siprix VoIP SDK plugin for embedding voice and video communication (based on SIP
   s.license          = { :file => '../LICENSE' }
   s.author           = { 'Siprix' => 'developers@siprix-voip.com' }
   s.source           = { :path => '.' }
-  s.source_files = 'Classes/**/*'
+  s.source_files = 'siprix_voip_sdk_ios/Sources/siprix_voip_sdk_ios/**/*'
   s.dependency 'Flutter'
   s.platform = :ios, '11.0'
 
@@ -22,9 +22,9 @@ Siprix VoIP SDK plugin for embedding voice and video communication (based on SIP
   s.swift_version = '5.0'
   
   # telling CocoaPods not to remove framework
-  s.preserve_paths = 'siprix.xcframework', 'siprixMedia.xcframework'  # telling linker to include siprix framework
+  s.preserve_paths = 'siprix_voip_sdk_ios/**/*'
   s.xcconfig = { 'OTHER_LDFLAGS' => '-framework siprix -framework siprixMedia' }  # including siprix framework
-  s.vendored_frameworks = 'siprix.xcframework', 'siprixMedia.xcframework'  # including native framework
+  s.vendored_frameworks = 'siprix_voip_sdk_ios/Frameworks/siprix.xcframework', 'siprix_voip_sdk_ios/Frameworks/siprixMedia.xcframework'  # including native framework
   s.frameworks = 'siprix', 'siprixMedia'
   s.library = 'c++'
 end
