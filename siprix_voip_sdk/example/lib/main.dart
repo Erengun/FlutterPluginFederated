@@ -207,7 +207,7 @@ class _MyAppState extends State<MyApp> {
     //- Uncomment if required -//
     //iniData.enableVUmeter = true;
     //iniData.singleCallMode = false;
-    //iniData.tlsVerifyServer = false;
+
     //if(Platform.isIOS) {
     //  iniData.enableCallKit = true;
     //  iniData.enablePushKit = true; //Enable only when added PushNotif support on server side

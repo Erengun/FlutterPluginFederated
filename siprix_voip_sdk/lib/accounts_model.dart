@@ -29,6 +29,7 @@ class InitData implements ISiprixData {
   int?  rtpStartPort;
 
   /// Enable verify server's certificate (common option for all accounts, by default disabled)
+  @Deprecated("Set: `account.tlsCaCertPath` when is required to verify server's cert")
   bool? tlsVerifyServer;
 
   /// Enable single call mode when library can make/accept only one call
@@ -42,6 +43,9 @@ class InitData implements ISiprixData {
 
   ///Android only. Enables listening VOLUME_CHANGED_ACTION and mute ringtone sound when detected (Valid only for Android, disabled by default)
   bool? listenVolChange;
+
+  ///Android only. Enables using PROXIMITY_SCREEN_OFF_WAKE_LOCK and turns the screen off when the phone's proximity sensor detects a nearby object (Valid only for Android, enabled by default)
+  bool? useProximity;
 
   /// iOS only. Enable PushKit support
   bool? enablePushKit;
@@ -66,6 +70,9 @@ class InitData implements ISiprixData {
 
   /// Set using DNS SRV for resolve IP address of SIP server/proxy (by default `true`).
   bool? useDnsSrv;
+
+  /// App can specify own DNS server as csv string Example: server1,server2,server3
+  String? dnsServers;
 
   /// Set recording call sound in stereo mode (keep sent/received sound in separate channels) (by default `false`).
   bool? recordStereo;
@@ -99,11 +106,11 @@ class InitData implements ISiprixData {
     if(logLevelFile!=null)      ret['logLevelFile'] = logLevelFile!.id;
     if(logLevelIde!=null)       ret['logLevelIde']  = logLevelIde!.id;
     if(rtpStartPort!=null)      ret['rtpStartPort'] = rtpStartPort;
-    if(tlsVerifyServer!=null)   ret['tlsVerifyServer'] = tlsVerifyServer;
     if(singleCallMode!=null)    ret['singleCallMode'] = singleCallMode;
     if(shareUdpTransport!=null) ret['shareUdpTransport'] = shareUdpTransport;
     if(listenTelState!=null)    ret['listenTelState'] = listenTelState;
     if(listenVolChange!=null)   ret['listenVolChange'] = listenVolChange;
+    if(useProximity!=null)      ret['useProximity'] = useProximity;
     if(enablePushKit!=null)     ret['enablePushKit'] = enablePushKit;
     if(enableCallKit!=null)     ret['enableCallKit'] = enableCallKit;
     if(enableCallKitMute!=null) ret['enableCallKitMute'] = enableCallKitMute;
@@ -113,6 +120,7 @@ class InitData implements ISiprixData {
     if(serviceClassName!=null)  ret['serviceClassName'] = serviceClassName;
     if(unregOnDestroy!=null)    ret['unregOnDestroy'] = unregOnDestroy;
     if(useDnsSrv!=null)         ret['useDnsSrv'] = useDnsSrv;
+    if(dnsServers!=null)        ret['dnsServers'] = dnsServers;
     if(recordStereo!=null)      ret['recordStereo'] = recordStereo;
     if(enableVideoCall!=null)   ret['enableVideoCall'] = enableVideoCall;
     if(transpForceIPv4!=null)   ret['transpForceIPv4'] = transpForceIPv4;
@@ -178,6 +186,7 @@ class Codec {
       case SiprixVoipSdk.kAudioCodecDTMF: return "DTMF/8000";
       case SiprixVoipSdk.kAudioCodecCN:   return "CN/8000";
       case SiprixVoipSdk.kVideoCodecH264: return "H264";
+      case SiprixVoipSdk.kVideoCodecH264_PM0: return "H264 PM0";
       case SiprixVoipSdk.kVideoCodecVP8:  return "VP8";
       case SiprixVoipSdk.kVideoCodecVP9:  return "VP9";
       case SiprixVoipSdk.kVideoCodecAV1:  return "AV1";
@@ -207,6 +216,7 @@ class Codec {
         SiprixVoipSdk.kVideoCodecVP8,
         SiprixVoipSdk.kVideoCodecVP9,
         SiprixVoipSdk.kVideoCodecAV1,
+        SiprixVoipSdk.kVideoCodecH264_PM0,
       ];
     }
   }
@@ -354,8 +364,14 @@ class AccountModel implements ISiprixData {
   SipTransport? transport = SipTransport.udp;
   /// Local SIP port number for this account (by default 0 which means using random port)
   int?    port;
-  /// Path to the CA certificate file which library will use for verify server's certificate when establishes TLS connection
+  /// Preffer using IPv6 for this account (by default false)
+  bool?   preferIPv6;
+  /// Path to the CA certificate file which library should use to verify server's certificate when establishes TLS connection. By default empty (client doesn't verify servers cert)
   String? tlsCaCertPath;
+  /// Path to the clients certificate/key files and password which library will use for mutual TLS client authentication
+  String? tlsClientCertPath;
+  String? tlsClientKeyPath;
+  String? tlsClientKeyPassword;
   /// Use 'sip' scheme when TLS transport selected (By default 'false', library uses 'sips' scheme)
   bool?   tlsUseSipScheme;
   /// Use RtcpMux (sending RTP and RTCP packets trough the same port, by default disabled).
@@ -433,7 +449,11 @@ class AccountModel implements ISiprixData {
     if(expireTime      !=null) ret['expireTime']      = expireTime;
     if(transport       !=null) ret['transport']       = transport?.id;
     if(port            !=null) ret['port']            = port;
+    if(preferIPv6      !=null) ret['preferIPv6']      = preferIPv6;
     if(tlsCaCertPath   !=null) ret['tlsCaCertPath']   = tlsCaCertPath;
+    if(tlsClientCertPath !=null) ret['tlsClientCertPath'] = tlsClientCertPath;
+    if(tlsClientKeyPath  !=null) ret['tlsClientKeyPath']  = tlsClientKeyPath;
+    if(tlsClientKeyPassword !=null) ret['tlsClientKeyPassword']= tlsClientKeyPassword;
     if(tlsUseSipScheme !=null) ret['tlsUseSipScheme'] = tlsUseSipScheme;
     if(rtcpMuxEnabled  !=null) ret['rtcpMuxEnabled']  = rtcpMuxEnabled;
     if(iceEnabled      !=null) ret['iceEnabled']      = iceEnabled;
@@ -469,8 +489,12 @@ class AccountModel implements ISiprixData {
       if((key == 'userAgent')&&(value is String))     { acc.userAgent = value;    } else
       if((key == 'expireTime')&&(value is int))       { acc.expireTime = value;   } else
       if((key == 'transport')&&(value is int))        { acc.transport = SipTransport.from(value);  } else
-      if((key == 'port')&&(value is int))             { acc.port = value;           } else
+      if((key == 'port')&&(value is int))             { acc.port = value;          } else
+      if((key == 'preferIPv6')&&(value is bool))      { acc.preferIPv6 = value;    } else
       if((key == 'tlsCaCertPath')&&(value is String)) { acc.tlsCaCertPath = value;  } else
+      if((key == 'tlsClientCertPath')&&(value is String)) { acc.tlsClientCertPath = value;  } else
+      if((key == 'tlsClientKeyPath')&&(value is String)) { acc.tlsClientKeyPath = value;  } else
+      if((key == 'tlsClientKeyPassword')&&(value is String)) { acc.tlsClientKeyPassword = value;  } else
       if((key == 'tlsUseSipScheme')&&(value is bool)) { acc.tlsUseSipScheme = value;} else
       if((key == 'rtcpMuxEnabled')&&(value is bool))  { acc.rtcpMuxEnabled = value; } else
       if((key == 'iceEnabled')&&(value is bool))      { acc.iceEnabled = value;     } else

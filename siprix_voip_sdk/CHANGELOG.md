@@ -1,3 +1,15 @@
+## 1.0.42
+ - Added new method 'Acc_SetTranspTlsClientCert', 
+   allows to specify client's cert/key files for mutual TLS client authentication
+ - Made deprecated method 'Ini_SetTlsVerifyServer', use only 'Acc_SetTranspTlsCaCert'
+ - Added new codec 'H264_PM0' - allows to enable H264 with 'packetization-mode=0'
+ - Added 'concealedSamples' to call stats (samples which were lost or arrived too late to be played out)
+ - Flutter: added new ini setting 'dnsServers'
+ - Flutter: added new account setting 'preferIPv6'
+ - Flutter.iOS/Flutter.MacOS: Added Swift Package Manager support
+ - Flutter.Android: added new ini setting 'useProximity'
+   //2026.08.16
+
 ## 1.0.41
 - Improved implementation which renegotiates calls when network state changed
 - Modified code of closing TCP(TLS) connections, now lib uses RST, which allows to avoid TIME_WAIT state
@@ -11,6 +23,7 @@
 - Android: Improved detection 464XLAT support. Added ability to wait a bit longer and check does IPv4 interface become available
 - Android, Linux: Set TCP socket option TCP_USER_TIMEOUT with value 15sec, which allows to detect losing TCP/TLS connection much faster
 - iOS: Redesigned handling audio devices and detect route changes. Now lib reports which device is selected
+  //2026.07.25
 
 ## 1.0.40
 - Updated recorder implementation

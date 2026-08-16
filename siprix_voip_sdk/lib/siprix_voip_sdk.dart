@@ -569,6 +569,7 @@ class SiprixVoipSdk {
   static const int kVideoCodecVP8   = 81;
   static const int kVideoCodecVP9   = 82;
   static const int kVideoCodecAV1   = 83;
+  static const int kVideoCodecH264_PM0 = 84;
 
   ///DTMF method constants
   static const int kDtmfMethodRtp  = 0;
