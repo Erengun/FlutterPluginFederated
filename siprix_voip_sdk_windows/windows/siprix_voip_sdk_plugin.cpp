@@ -365,7 +365,8 @@ void SiprixVoipSdkPlugin::handleModuleInitialize(const flutter::EncodableMap& ar
         if(strVal) {
             if(valName->compare("license")   == 0)   Siprix::Ini_SetLicense(iniData,      strVal->c_str());else
             if(valName->compare("brandName") == 0)   Siprix::Ini_SetBrandName(iniData,    strVal->c_str());else
-            if(valName->compare("homeFolder") == 0)  Siprix::Ini_SetHomeFolder(iniData,   strVal->c_str());
+            if(valName->compare("homeFolder") == 0)  Siprix::Ini_SetHomeFolder(iniData,   strVal->c_str());else
+            if(valName->compare("dnsServers") == 0)  Siprix::Ini_AddDnsServer(iniData,    strVal->c_str());
             continue;
         }
 
@@ -438,6 +439,7 @@ void SiprixVoipSdkPlugin::handleModuleVersion(const flutter::EncodableMap& argsM
 Siprix::AccData* SiprixVoipSdkPlugin::parseAccountData(const flutter::EncodableMap& argsMap)
 {
   Siprix::AccData* accData = Siprix::Acc_GetDefault();
+  std::string tlsClientCertPath, tlsClientKeyPath, tlsClientKeyPassword;
 
   for(const auto& val : argsMap) {
     const std::string* valName = std::get_if<std::string>(&val.first);
@@ -458,7 +460,10 @@ Siprix::AccData* SiprixVoipSdkPlugin::parseAccountData(const flutter::EncodableM
         if(valName->compare("stunServer")    == 0) Siprix::Acc_SetStunServer(accData,     strVal->c_str()); else
         if(valName->compare("turnServer")    == 0) Siprix::Acc_SetTurnServer(accData,     strVal->c_str()); else
         if(valName->compare("turnUser")      == 0) Siprix::Acc_SetTurnUser(accData,       strVal->c_str()); else
-        if(valName->compare("turnPassword")  == 0) Siprix::Acc_SetTurnPassword(accData,   strVal->c_str());
+        if(valName->compare("turnPassword")  == 0) Siprix::Acc_SetTurnPassword(accData,   strVal->c_str()); else
+        if(valName->compare("tlsClientCertPath")    == 0) tlsClientCertPath = strVal->c_str(); else
+        if(valName->compare("tlsClientKeyPath")     == 0) tlsClientKeyPath  = strVal->c_str(); else
+        if(valName->compare("tlsClientKeyPassword") == 0) tlsClientKeyPassword = strVal->c_str(); 
         continue;
     }
 
@@ -480,7 +485,8 @@ Siprix::AccData* SiprixVoipSdkPlugin::parseAccountData(const flutter::EncodableM
       if(valName->compare("forceSipProxy") == 0)      Siprix::Acc_SetForceSipProxy(accData,      *boolVal);else
       if(valName->compare("tlsUseSipScheme") == 0)  Siprix::Acc_SetUseSipSchemeForTls(accData, *boolVal);else
       if(valName->compare("rtcpMuxEnabled") == 0)   Siprix::Acc_SetRtcpMuxEnabled(accData,     *boolVal);else
-      if(valName->compare("iceEnabled") == 0)       Siprix::Acc_SetIceEnabled(accData, *boolVal);        
+      if(valName->compare("preferIPv6") == 0)       Siprix::Acc_SetTranspPreferIPv6(accData, *boolVal);else
+      if(valName->compare("iceEnabled") == 0)       Siprix::Acc_SetIceEnabled(accData, *boolVal); 
       continue;
     }
     
@@ -519,6 +525,8 @@ Siprix::AccData* SiprixVoipSdkPlugin::parseAccountData(const flutter::EncodableM
     }
     
   }//for
+
+  Siprix::Acc_SetTranspTlsClientCert(accData, tlsClientCertPath.c_str(), tlsClientKeyPath.c_str(), tlsClientKeyPassword.c_str());
 
   return accData;
 }
