@@ -891,6 +891,12 @@ class SiprixVoipSdkPlugin: FlutterPlugin,
     val useDnsSrv : Boolean? = args["useDnsSrv"] as? Boolean
     if(useDnsSrv != null) { iniData.setUseDnsSrv(useDnsSrv); }
 
+    val useProximity : Boolean? = args["useProximity"] as? Boolean
+    if(useProximity != null) { iniData.setUseProximity(useProximity); }
+
+    val dnsServers : String? = args["dnsServers"] as? String
+    if(dnsServers != null) { iniData.addDnsServer(dnsServers); }
+
     val recordStereo : Boolean? = args["recordStereo"] as? Boolean
     if(recordStereo != null) { iniData.setRecordStereo(recordStereo); }
 
@@ -984,8 +990,18 @@ class SiprixVoipSdkPlugin: FlutterPlugin,
     val port : Int? = args["port"] as? Int
     if(port != null) { accData.setTranspPort(port); }
 
+    val preferIPv6 : Boolean? = args["preferIPv6"] as? Boolean
+    if(preferIPv6 != null) { accData.setTranspPreferIPv6(preferIPv6); }
+
     val tlsCaCertPath : String? = args["tlsCaCertPath"] as? String
     if(tlsCaCertPath != null) { accData.setTranspTlsCaCert(tlsCaCertPath); }
+
+    val tlsClientCertPath : String? = args["tlsClientCertPath"] as? String
+    val tlsClientKeyPath : String? = args["tlsClientKeyPath"] as? String
+    val tlsClientKeyPassword : String? = args["tlsClientKeyPassword"] as? String
+    if((tlsClientCertPath != null)&&(tlsClientKeyPath != null)) {
+      accData.setTranspTlsClientCert(tlsClientCertPath, tlsClientKeyPath, tlsClientKeyPassword ?: "");
+    }
 
     val tlsUseSipScheme : Boolean? = args["tlsUseSipScheme"] as? Boolean
     if(tlsUseSipScheme != null) { accData.setUseSipSchemeForTls(tlsUseSipScheme); }

@@ -1,3 +1,14 @@
+## 1.0.42
+ - Added new method 'Acc_SetTranspTlsClientCert', 
+   allows to specify client's cert/key files for mutual TLS client authentication
+ - Made deprecated method 'Ini_SetTlsVerifyServer', use only 'Acc_SetTranspTlsCaCert'
+ - Added new codec 'H264_PM0' - allows to enable H264 with 'packetization-mode=0'
+ - Added 'concealedSamples' to call stats (samples which were lost or arrived too late to be played out)
+ - Flutter: added new ini setting 'dnsServers'
+ - Flutter: added new account setting 'preferIPv6'
+ - Flutter.Android: added new ini setting 'useProximity'
+   //2026.08.16
+
 ## 1.0.41
 - Improved implementation which renegotiates calls when network state changed
 - Modified code of closing TCP(TLS) connections, now lib uses RST, which allows to avoid TIME_WAIT state
