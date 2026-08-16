@@ -407,6 +407,10 @@ static FlMethodResponse* handleModuleInitialize(FlValue* args, SiprixVoipSdkPlug
     if (val != nullptr && fl_value_get_type(val) == FL_VALUE_TYPE_BOOL)
       Siprix::Ini_SetUseDnsSrv(iniData, fl_value_get_bool(val));
 
+    val = fl_value_lookup_string(args, "dnsServers");
+    if (val != nullptr && fl_value_get_type(val) == FL_VALUE_TYPE_STRING)
+      Siprix::Ini_AddDnsServer(iniData, fl_value_get_string(val));
+
     val = fl_value_lookup_string(args, "recordStereo");
     if (val != nullptr && fl_value_get_type(val) == FL_VALUE_TYPE_BOOL)
       Siprix::Ini_SetRecordStereo(iniData, fl_value_get_bool(val));
@@ -515,9 +519,26 @@ Siprix::AccData* parseAccData(FlValue* args)
     if (val != nullptr && fl_value_get_type(val) == FL_VALUE_TYPE_INT)
         Acc_SetTranspPort(accData, static_cast<uint16_t>(fl_value_get_int(val)));
 
+    val = fl_value_lookup_string(args, "preferIPv6");
+    if (val != nullptr && fl_value_get_type(val) == FL_VALUE_TYPE_BOOL)
+        Acc_SetTranspPreferIPv6(accData, fl_value_get_bool(val));
+
     val = fl_value_lookup_string(args, "tlsCaCertPath");
     if (val != nullptr && fl_value_get_type(val) == FL_VALUE_TYPE_STRING)
         Acc_SetTranspTlsCaCert(accData, fl_value_get_string(val));
+
+    val = fl_value_lookup_string(args, "tlsClientCertPath");
+    std::string tlsClientCertPath = (val != nullptr && fl_value_get_type(val) == FL_VALUE_TYPE_STRING) ?
+                                      fl_value_get_string(val) : "";
+
+    val = fl_value_lookup_string(args, "tlsClientKeyPath");
+    std::string tlsClientKeyPath = (val != nullptr && fl_value_get_type(val) == FL_VALUE_TYPE_STRING) ?
+                                      fl_value_get_string(val) : "";
+
+    val = fl_value_lookup_string(args, "tlsClientKeyPassword");
+    std::string tlsClientKeyPassword = (val != nullptr && fl_value_get_type(val) == FL_VALUE_TYPE_STRING) ?
+                                      fl_value_get_string(val) : "";
+    Siprix::Acc_SetTranspTlsClientCert(accData, tlsClientCertPath.c_str(), tlsClientKeyPath.c_str(), tlsClientKeyPassword.c_str());
 
     val = fl_value_lookup_string(args, "tlsUseSipScheme");
     if (val != nullptr && fl_value_get_type(val) == FL_VALUE_TYPE_BOOL)
