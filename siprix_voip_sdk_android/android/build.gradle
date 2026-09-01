@@ -77,6 +77,48 @@ android {
     }
 }
 
-dependencies {    
+dependencies {
     implementation(name:'siprix_voip_sdk', ext:'aar')
 }
+
+// Strip IniData classes from the AAR's classes.jar at build time.
+// IniData.java in src/main/java/com/siprix/ carries the JNI fix
+// (issue #105); keeping the AAR copy causes D8 duplicate-class errors.
+// Idempotent — safe to run on every build, survives AAR updates.
+task stripIniDataFromAar {
+    def aarFile = file('libs/siprix_voip_sdk.aar')
+    doLast {
+        if (!aarFile.exists()) return
+
+        def tmpDir = new File(buildDir, 'aar-strip-tmp')
+        tmpDir.mkdirs()
+        def jarFile = new File(tmpDir, 'classes.jar')
+
+        // Extract classes.jar from AAR
+        ant.unzip(src: aarFile, dest: tmpDir) { patternset { include(name: 'classes.jar') } }
+        if (!jarFile.exists()) return
+
+        // Check if IniData is still inside
+        def hasIniData = false
+        new java.util.zip.ZipFile(jarFile).withCloseable { zf ->
+            hasIniData = zf.entries().any { it.name.startsWith('com/siprix/IniData') }
+        }
+        if (!hasIniData) {
+            logger.lifecycle('stripIniDataFromAar: already clean')
+            return
+        }
+
+        // Remove IniData entries from classes.jar
+        exec { commandLine 'zip', '-d', jarFile.absolutePath, 'com/siprix/IniData.class', 'com/siprix/IniData$LogLevel.class' }
+
+        // Update the AAR with stripped classes.jar
+        exec {
+            workingDir tmpDir
+            commandLine 'zip', aarFile.absolutePath, 'classes.jar'
+        }
+
+        logger.lifecycle('stripIniDataFromAar: stripped IniData classes from AAR')
+    }
+}
+
+preBuild.dependsOn stripIniDataFromAar
